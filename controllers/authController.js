@@ -13,6 +13,7 @@ const publicUser = (user) => ({
   phone: user.phone,
   role: user.role,
   active: user.active,
+  mustChangePassword: user.mustChangePassword,
 });
 
 const issueTokens = async (user) => {
@@ -59,6 +60,13 @@ exports.allowTo = (...roles) => (req, res, next) => {
   next();
 };
 
+exports.requireChangedPassword = (req, res, next) => {
+  if (req.user.mustChangePassword) {
+    return next(new AppError("يجب تغيير كلمة المرور المؤقتة أولاً", 403));
+  }
+  next();
+};
+
 exports.me = (req, res) => res.json({ success: true, data: publicUser(req.user) });
 
 exports.refreshToken = catchAsync(async (req, res) => {
@@ -77,4 +85,30 @@ exports.refreshToken = catchAsync(async (req, res) => {
 exports.logout = catchAsync(async (req, res) => {
   await User.findByIdAndUpdate(req.user._id, { $unset: { refreshToken: 1 } });
   res.json({ success: true, message: "تم تسجيل الخروج" });
+});
+
+exports.changePassword = catchAsync(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    throw new AppError("أدخل كلمة المرور الحالية والجديدة", 400);
+  }
+  if (newPassword.length < 8) {
+    throw new AppError("كلمة المرور الجديدة يجب ألا تقل عن 8 أحرف", 400);
+  }
+
+  const user = await User.findById(req.user._id).select("+password");
+  if (!(await user.comparePassword(currentPassword))) {
+    throw new AppError("كلمة المرور الحالية غير صحيحة", 401);
+  }
+
+  user.password = newPassword;
+  user.mustChangePassword = false;
+  user.refreshToken = undefined;
+  await user.save();
+
+  res.json({
+    success: true,
+    message: "تم تغيير كلمة المرور بنجاح",
+    data: { user: publicUser(user), ...(await issueTokens(user)) },
+  });
 });

@@ -1,2 +1,6 @@
 node_modules/
 *.env
+
+# بيانات الطلاب وملفات كلمات المرور لا تُرفع للمستودع العام
+data/*.xlsx
+data/*credentials*.csv

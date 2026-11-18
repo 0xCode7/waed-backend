@@ -12,6 +12,7 @@ const userSchema = new mongoose.Schema({
   phone: { type: String, required: true, unique: true, trim: true },
   password: { type: String, required: true, minlength: 6, select: false },
   active: { type: Boolean, default: true },
+  mustChangePassword: { type: Boolean, default: false },
   refreshToken: { type: String, select: false },
 }, { timestamps: true });
 
