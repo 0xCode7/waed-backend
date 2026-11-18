@@ -162,6 +162,7 @@ async function importStudents(students) {
   const credentials = [];
   let parentsCreated = 0;
   let studentsCreated = 0;
+  let studentsUpdated = 0;
   let studentsAlreadyExist = 0;
 
   for (const item of students) {
@@ -186,7 +187,14 @@ async function importStudents(students) {
 
     const existingStudent = await Student.findOne({ fullName: item.fullName, parent: parent._id });
     if (existingStudent) {
-      studentsAlreadyExist += 1;
+      if (existingStudent.age !== item.age || existingStudent.gender !== item.gender) {
+        existingStudent.age = item.age;
+        existingStudent.gender = item.gender;
+        await existingStudent.save();
+        studentsUpdated += 1;
+      } else {
+        studentsAlreadyExist += 1;
+      }
       continue;
     }
 
@@ -199,7 +207,7 @@ async function importStudents(students) {
     studentsCreated += 1;
   }
 
-  return { credentials, parentsCreated, studentsCreated, studentsAlreadyExist };
+  return { credentials, parentsCreated, studentsCreated, studentsUpdated, studentsAlreadyExist };
 }
 
 function saveCredentials(credentials) {
@@ -237,6 +245,7 @@ async function main() {
   const credentialsPath = saveCredentials(result.credentials);
   console.log(`Parents created: ${result.parentsCreated}`);
   console.log(`Students created: ${result.studentsCreated}`);
+  console.log(`Students updated: ${result.studentsUpdated}`);
   console.log(`Students already exist: ${result.studentsAlreadyExist}`);
   if (credentialsPath) console.log(`Credentials saved securely to: ${credentialsPath}`);
 }
