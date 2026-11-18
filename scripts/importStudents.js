@@ -39,9 +39,16 @@ function normalizePhone(value) {
   let phone = convertDigits(value);
   if (/^\d+\.0$/.test(phone)) phone = phone.slice(0, -2);
   phone = phone.replace(/\D/g, "");
-  if (phone.startsWith("20") && phone.length === 12) phone = `0${phone.slice(2)}`;
+  if (phone.startsWith("0020")) phone = `0${phone.slice(4)}`;
+  else if (phone.startsWith("20")) phone = `0${phone.slice(2)}`;
   if (phone.startsWith("1") && phone.length === 10) phone = `0${phone}`;
   return phone;
+}
+
+function isEgyptianPhone(phone) {
+  const mobile = /^01[0125]\d{8}$/;
+  const landline = /^0(?:2\d{8}|[3-9]\d{7,8})$/;
+  return mobile.test(phone) || landline.test(phone);
 }
 
 function parseAge(value) {
@@ -111,7 +118,7 @@ async function readStudents(filePath) {
     if (nameParts.length < 3 || nameParts.length > 6) errors.push("اسم الطالب يحتاج مراجعة");
     if (!age || age < 3 || age > 100) errors.push("السن غير صحيح");
     if (!gender) errors.push("النوع غير صحيح");
-    if (!/^01\d{9}$/.test(phone)) errors.push("رقم ولي الأمر غير صحيح");
+    if (!isEgyptianPhone(phone)) errors.push("رقم ولي الأمر غير صحيح");
 
     const uniqueKey = `${normalizeKey(fullName)}|${phone}`;
     if (seen.has(uniqueKey)) errors.push("تسجيل مكرر داخل الملف");
@@ -223,6 +230,7 @@ if (require.main === module) {
 module.exports = {
   convertDigits,
   normalizePhone,
+  isEgyptianPhone,
   parseAge,
   normalizeGender,
 };

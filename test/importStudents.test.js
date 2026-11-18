@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
   normalizePhone,
+  isEgyptianPhone,
   parseAge,
   normalizeGender,
 } = require("../scripts/importStudents");
@@ -11,6 +12,11 @@ test("normalizes Egyptian parent phone numbers", () => {
   assert.equal(normalizePhone("01228 522 048"), "01228522048");
   assert.equal(normalizePhone("‭٠ ١٢٢ ٦٥٨٤٥٠١‬"), "01226584501");
   assert.equal(normalizePhone("+20 12 3456 7890"), "01234567890");
+  assert.equal(normalizePhone("+20 50 2348198"), "0502348198");
+  assert.equal(normalizePhone("0502348198"), "0502348198");
+  assert.equal(isEgyptianPhone("01234567890"), true);
+  assert.equal(isEgyptianPhone("0502348198"), true);
+  assert.equal(isEgyptianPhone("12345"), false);
 });
 
 test("normalizes numeric and Arabic student ages", () => {
