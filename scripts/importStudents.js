@@ -211,9 +211,18 @@ async function main() {
   if (credentialsPath) console.log(`Credentials saved securely to: ${credentialsPath}`);
 }
 
-main()
-  .catch((error) => {
-    console.error(error.message);
-    process.exitCode = 1;
-  })
-  .finally(() => mongoose.disconnect());
+if (require.main === module) {
+  main()
+    .catch((error) => {
+      console.error(error.message);
+      process.exitCode = 1;
+    })
+    .finally(() => mongoose.disconnect());
+}
+
+module.exports = {
+  convertDigits,
+  normalizePhone,
+  parseAge,
+  normalizeGender,
+};
