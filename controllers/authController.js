@@ -60,13 +60,6 @@ exports.allowTo = (...roles) => (req, res, next) => {
   next();
 };
 
-exports.requireChangedPassword = (req, res, next) => {
-  if (req.user.mustChangePassword) {
-    return next(new AppError("يجب تغيير كلمة المرور المؤقتة أولاً", 403));
-  }
-  next();
-};
-
 exports.me = (req, res) => res.json({ success: true, data: publicUser(req.user) });
 
 exports.refreshToken = catchAsync(async (req, res) => {

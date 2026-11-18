@@ -4,7 +4,6 @@ const students = require("../controllers/studentController");
 const router = express.Router();
 
 router.use(auth.protect);
-router.use(auth.requireChangedPassword);
 router.route("/")
   .get(auth.allowTo("admin", "teacher", "parent"), students.getStudents)
   .post(auth.allowTo("admin"), students.createStudent);
