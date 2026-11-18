@@ -74,7 +74,7 @@ function normalizeGender(value) {
 
 function parentNameFromStudent(studentName) {
   const parts = cleanText(studentName).split(" ");
-  return parts.length > 1 ? parts.slice(1).join(" ") : `ولي أمر ${studentName}`;
+  return parts.length >= 3 ? parts.slice(1).join(" ") : `ولي أمر ${studentName}`;
 }
 
 function generateTemporaryPassword() {
@@ -104,32 +104,55 @@ async function readStudents(filePath) {
 
   const accepted = [];
   const rejected = [];
-  const seen = new Set();
+  const seen = new Map();
+
+  // تصحيحات مؤكدة للصفوف غير المنتظمة في ملف التسجيل الحالي.
+  const rowCorrections = {
+    25: [
+      { fullName: "مروان أحمد عبده السيد", age: 12, gender: "male" },
+      { fullName: "جنى أحمد عبده السيد", age: 9, gender: "female" },
+    ],
+    48: [{ fullName: "محمد علاء جمعه محمد السيد", age: 7, gender: "male" }],
+    58: [{ fullName: "كريم شعبان", age: 10, gender: "male", allowShortName: true }],
+  };
 
   rows.slice(1).forEach((row, index) => {
     const excelRow = index + 2;
-    const fullName = cleanText(row[columns.name]);
-    const age = parseAge(row[columns.age]);
-    const gender = normalizeGender(row[columns.gender]);
     const phone = normalizePhone(row[columns.phone]);
-    const nameParts = fullName.split(" ").filter(Boolean);
-    const errors = [];
+    const entries = rowCorrections[excelRow] || [{
+      fullName: cleanText(row[columns.name]),
+      age: parseAge(row[columns.age]),
+      gender: normalizeGender(row[columns.gender]),
+    }];
 
-    if (nameParts.length < 3 || nameParts.length > 6) errors.push("اسم الطالب يحتاج مراجعة");
-    if (!age || age < 3 || age > 100) errors.push("السن غير صحيح");
-    if (!gender) errors.push("النوع غير صحيح");
-    if (!isEgyptianPhone(phone)) errors.push("رقم ولي الأمر غير صحيح");
+    entries.forEach((entry) => {
+      const { fullName, age, gender, allowShortName = false } = entry;
+      const nameParts = fullName.split(" ").filter(Boolean);
+      const errors = [];
 
-    const uniqueKey = `${normalizeKey(fullName)}|${phone}`;
-    if (seen.has(uniqueKey)) errors.push("تسجيل مكرر داخل الملف");
+      if ((!allowShortName && nameParts.length < 3) || nameParts.length > 6) {
+        errors.push("اسم الطالب يحتاج مراجعة");
+      }
+      if (!age || age < 3 || age > 100) errors.push("السن غير صحيح");
+      if (!gender) errors.push("النوع غير صحيح");
+      if (!isEgyptianPhone(phone)) errors.push("رقم ولي الأمر غير صحيح");
 
-    if (errors.length) {
-      rejected.push({ row: excelRow, fullName, phone, reason: errors.join("، ") });
-      return;
-    }
+      const uniqueKey = `${normalizeKey(fullName)}|${phone}`;
+      const previousIndex = seen.get(uniqueKey);
+      if (previousIndex !== undefined) {
+        // لو التسجيل الأحدث صحح السن، نحتفظ بأحدث قيمة دون تكرار الطالب.
+        accepted[previousIndex].age = age;
+        errors.push("تسجيل مكرر داخل الملف؛ تم الاحتفاظ بأحدث سن");
+      }
 
-    seen.add(uniqueKey);
-    accepted.push({ fullName, age, gender, phone, parentName: parentNameFromStudent(fullName) });
+      if (errors.length) {
+        rejected.push({ row: excelRow, fullName, phone, reason: errors.join("، ") });
+        return;
+      }
+
+      seen.set(uniqueKey, accepted.length);
+      accepted.push({ fullName, age, gender, phone, parentName: parentNameFromStudent(fullName) });
+    });
   });
 
   return { accepted, rejected };
